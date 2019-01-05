@@ -37,11 +37,17 @@ namespace CandyPretty{
 
 
         enum RenderAdjustment{
+                RenderAdjustment_None,
                 RenderAdjustment_Left,
                 RenderAdjustment_Center,
                 RenderAdjustment_Right,
         };
         struct RenderOptions{
+
+                RenderOptions& DefaultAdjustment(RenderAdjustment adj){
+                        default_adjustment_ = adj;
+                        return *this;
+                }
                 RenderOptions& SetAdjustment(size_t offset, RenderAdjustment adj){
                         adjustment_[offset] = adj;
                         return *this;
@@ -66,6 +72,22 @@ namespace CandyPretty{
                 size_t GetWidth(size_t offset)const{
                         auto iter = widths_.find(offset);
                         return ( iter == widths_.end() ? -1 : iter->second );
+                }
+                std::string AtomSep{"|"};
+                std::string AtomPrefix;
+                std::string AtomSuffix;
+                std::string LinePrefix{"|"};
+                std::string LineSuffix{"|"};
+                char Corner{'+'};
+                char Fill{'-'};
+
+                static RenderOptions CsvOptions(){
+                        RenderOptions opts;
+                        opts.DefaultAdjustment(RenderAdjustment_None);
+                        opts.AtomSep = ",";
+                        opts.LinePrefix = "";
+                        opts.LineSuffix = "";
+                        return opts;
                 }
         private:
                 RenderAdjustment default_adjustment_{RenderAdjustment_Center};
@@ -107,6 +129,12 @@ namespace CandyPretty{
                 struct Printer : boost::static_visitor<void>{
                         void put_(std::string const& s, size_t w, RenderAdjustment adj){
 
+
+                                if(adj == RenderAdjustment_None){
+                                        *ostr << s;
+                                        return;
+                                }
+
                                 if( w < s.size() ){
                                         *ostr << s.substr(0,w);
                                         return;
@@ -130,18 +158,29 @@ namespace CandyPretty{
                                 *ostr << repeat(' ', left) << s << repeat(' ', right);
                         }
                         void operator()(std::vector<std::string> const& line){
+                                *ostr << opts->LinePrefix;
                                 for( size_t i=0;i!=line.size();++i){
+                                        #if 0
                                         *ostr << "|";
+                                        #endif
+
+
+                                        if( i != 0 ){
+                                                *ostr << opts->AtomSep;
+                                        }
+                                        *ostr << opts->AtomPrefix;
                                         put_(line[i], widths->widths[i], opts->GetAdjustment(i) );
+                                        *ostr << opts->AtomSuffix;
                                 }
-                                *ostr << "|\n";
+                                *ostr << opts->LineSuffix;
+                                *ostr << "\n";
                         }
                         void operator()(LineBreakType){
                                 std::string spacer;
-                                spacer += '+';
+                                spacer += opts->Corner;
                                 for(size_t i=0;i!=widths->widths.size();++i){
-                                        spacer += repeat('-', widths->widths[i]);
-                                        spacer += '+';
+                                        spacer += repeat(opts->Fill, widths->widths[i]);
+                                        spacer += opts->Corner;
                                 }
                                 *ostr << spacer << "\n";
                         }
