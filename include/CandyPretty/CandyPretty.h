@@ -195,6 +195,30 @@ namespace CandyPretty{
                 };
         } // Detail
 
+        struct Lines : std::vector<LineItem>{
+                Lines& BeginLine(){
+                        push_back(std::vector<std::string>{});
+                        return *this;
+                }
+                Lines& Break(){
+                        push_back(LineBreak);
+                        return *this;
+                }
+                template<class T>
+                Lines& operator()(T const& val){
+                        auto ptr = [this](){
+                                if( size() ){
+                                        if( auto lines = boost::get<std::vector<std::string> >(&back()) ){
+                                                return lines;
+                                        }
+                                }
+                                BeginLine();
+                                return boost::get<std::vector<std::string> >(&back());
+                        }();
+                        ptr->push_back(boost::lexical_cast<std::string>(val));
+                        return *this;
+                }
+        };
         inline
         void RenderTablePretty(std::ostream& ostr,
                                std::vector<LineItem> const& lines,
